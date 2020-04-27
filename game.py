@@ -103,7 +103,8 @@ def inputMatches(players):
 
 def runGame(game_state, player_states):
     ''' Core loop of the game, this runs throughout the game.
-        @param game_state      The initial state of the game, with players and role assignments
+        @param game_state       The initial state of the game, with players and role assignments
+        @param player_states    The initial states of each player
     ''' 
     while game_state.round < game_state.max_rounds:
         
