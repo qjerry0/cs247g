@@ -171,9 +171,9 @@ class Player(object):
     def __init__(self, name):
         self.name = name
 
-    def onGameInit(self, player_info):
+    def onGameInit(self, game_state):
         ''' This will be called upon initialization of the game. Implement for each player.
-        @param player_info   Any information for the player to update its internal state and score
+        @param game_state   The current game state
         '''
         raise NotImplementedError
 
