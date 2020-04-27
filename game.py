@@ -59,7 +59,7 @@ def initPlayerStates(game_state):
     #TODO: once real players are created, change this to use them
     players = []
     for p, r in zip(game_state.players, game_state.roles):
-        players.append(DefaultPlayer(p))
+        players.append(DefaultPlayer(p, r))
     return players
 
 def announceRoles(players, roles):
@@ -138,7 +138,6 @@ def runGame(game_state, player_states):
 
     print("Narrator, please say: ")
     print("And that was the last week! Let's see who ended up on top!")
-    print(rankings)
     for p, fs in rankings:
         print("%s finished the class with a score of %d!" % (p, fs))
 
@@ -168,8 +167,9 @@ class Player(object):
     A player in our game, each will be uniquely identified by its name. To make a new role,
     extend and implement this class.
     '''
-    def __init__(self, name):
+    def __init__(self, name, role):
         self.name = name
+        self.role = role
 
     def onGameInit(self, game_state):
         ''' This will be called upon initialization of the game. Implement for each player.
@@ -200,9 +200,6 @@ class DefaultPlayer(Player):
     ''' 
     A default player with no special role or ability. Always scores 0 at the end of the game.
     '''
-    def __init__(self, name):
-        self.name = name
-
     def onGameInit(self, player_info):
         pass
 
