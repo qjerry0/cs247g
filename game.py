@@ -12,7 +12,7 @@ ROLES_5 = ["slacker", "thief", "snitch", "god", "leech", "team_player", "schaden
 ROLES_6 = ["slacker", "thief", "snitch", "god", "flake", "gossip", "leech", "team_player",      # role set, 6+
             "schadenfreuder", "hacker"]
 
-def initGame():
+def init_game():
     ''' Initializes a game
         @return list    A list containing the names of the players, as strings.
     '''
@@ -39,7 +39,7 @@ def initGame():
                 break
     return players
 
-def generateRoles(n):
+def generate_roles(n):
     ''' Generates a list of roles for the players
         @param n        The number of players in the game
         @return list    The roles, as strings, of the players
@@ -51,26 +51,36 @@ def generateRoles(n):
     else:
         return random.sample(ROLES_6, n)
 
-def initPlayerStates(game_state):
+def init_player_states(game_state):
     ''' Prompts narrator to publically announce a player's role, if necessary given the game state
         @param game_state   The game state
         @return list        A list of Player objects
     ''' 
-    #TODO: once real players are created, change this to use them
+    # TODO: once real players are created, change this to use them
     players = []
     for p, r in zip(game_state.players, game_state.roles):
         players.append(DefaultPlayer(p, r))
     return players
 
-def announceRoles(players, roles):
+def announce_roles(players, roles):
     ''' Prompts narrator to tell players their role assignments
         @param players      The players' names
         @param roles        The players' roles, in the same order
     ''' 
+    schadenfreuder_name = None
+
     for p, r in zip(players, roles):
         print("Narrator, please let %s know that they are: %s" %(p, r))
 
-def announceMatches(players, matches):
+        if r == "schadenfreuder":
+            schadenfreuder_name = p
+
+    if (schadenfreuder_name):
+        enemy = random.choice(list(set(players) - set(schadenfreuder_name)))
+        print("Narrator, please let " + schadenfreuder_name + " know their enemy is " + enemy)
+
+
+def announce_matches(players, matches):
     ''' Prompts narrator to tell players their preferences in the reveal phase
         @param players      The players' names
         @param roles        The players' matches, in the same order
@@ -78,30 +88,40 @@ def announceMatches(players, matches):
     # TODO: implement this, figure out some fun/interesting way to announce
     pass
 
-def announceRole(game_state):
+def announce_role(game_state):
     ''' Prompts narrator to publically announce a player's role, if necessary given the game state
         @param game_state   The game state
     ''' 
-    # TODO: implement this
+    
     pass
 
-def inputMatches(players):
+def input_matches(players):
     ''' Prompts narrator to input the matches of each player after the matching phase
         @param players  The players in the game
         @return list    The intended matches of the players, in the same order
     '''
-    matches = []
+    matches = {}    # Dict - {Player name (str) : Player name they chose to pair w/ (str)}
     for p in players:
         while True:
             match = input("Please input the student %s picked: " % p)
-            if match not in players:
-                print("You've made a typo, please input one of the players")
+            if match == p:
+                print("Players cannot pair with themselves, please try again.")
+            elif match not in players:
+                print("You've made a typo, please input one of the players.")
             else:
+                matches[p] = match
                 break
-        matches.append(match)
     return matches
 
-def runGame(game_state, player_states):
+
+def successful_pairings(matches):
+    ''' @return dict of successful matches only '''
+    reverse_matches = {v: k for k, v in matches.items()}    #dict with reverse key/values from matches
+    successful_pairs = {k: matches[k] for k in matches if k in reverse_matches and matches[k] == reverse_matches[k]}    #finds matching k/v pairs
+    return successful_pairs
+
+
+def run_game(game_state, player_states):
     ''' Core loop of the game, this runs throughout the game.
         @param game_state       The initial state of the game, with players and role assignments
         @param player_states    The initial states of each player
@@ -111,27 +131,38 @@ def runGame(game_state, player_states):
         # Matching/messaging phase
         print("Narrator, please say: ")
         round_print = game_state.round + 1
-        print(  "It is the start of week %d! Students, you have %d seconds to find a project \
+        print("It is the start of week %d! Students, you have %d seconds to find a project \
                 partner by messaging them!" % (round_print, game_state.round_times[game_state.round]))
         # TODO: implement delay/prompts for narrator during the matching phase, e.g. 30 sec warning (please message me your matches!)
-        matches = inputMatches(game_state.players)
         
-        # Matching announce phase
-        announceMatches(players, matches)
+        # Announce matches
+        matches = input_matches(game_state.players)
+        announce_matches(players, matches)
+        #Calculate Matches
+        successful_match_dict = successful_pairings(matches)
+        print("These were the successfull pairings for the round: " + str(successful_match_dict))
+
         for ps in player_states:
-            ps.onMatchesRevealed(game_state)
+            ps.on_matches_revealed(game_state)
         
         # Role reveal phase
-        announceRole(game_state)
-        for ps in player_states:
-            ps.onRoleRevealed(game_state)
+        if game_state.round == 2:
+            #announce role of current person in lead
+            #current_ranking =
+            #print(p + " is currently in the lead, meaning it's time to reveal their role!")
+            #print(p + "'s role is.... " + fs.role)
+
+        announce_role(game_state)
+        # for ps in player_states:
+            # TODO ps.onRoleRevealed(game_state)
+
 
         game_state.round += 1
 
     # All rounds have finished, tally final scores
     final_scores = []
     for ps in player_states:
-        final_scores.append(ps.onGameCompletion(game_state))
+        final_scores.append(ps.final_bonuses(game_state))
 
     rankings = [(p, fs) for fs , p in sorted(zip(final_scores, players))]
     rankings.reverse() # start from last place and move up 
@@ -170,28 +201,24 @@ class Player(object):
     def __init__(self, name, role):
         self.name = name
         self.role = role
+        self.score = 0
 
-    def onGameInit(self, game_state):
+    def on_game_init(self, game_state):
         ''' This will be called upon initialization of the game. Implement for each player.
         @param game_state   The current game state
         '''
         raise NotImplementedError
 
-    def onMatchesRevealed(self, game_state):
+    def on_matches_revealed(self, game_state):
         ''' This will be called upon narrator revealing matches for the round. Implement for each player.
         @param game_state   The current game state
         '''
         pass
 
-    def onRoleRevealed(self, game_state):
-        ''' This will be called upon narrator revealing the role for the round. Implement for each player.
-        @param game_state   The current game state
-        '''
-        pass
-
-    def onGameCompletion(self, game_state):
+    def final_bonuses(self, game_state):
         ''' This will be called upon the completion of the final round. Implement for each player.
         @param game_state   The current game state
+        @return The final score the player has, both normal and bonus points combined
         '''
         raise NotImplementedError
 
@@ -200,16 +227,173 @@ class DefaultPlayer(Player):
     ''' 
     A default player with no special role or ability. Always scores 0 at the end of the game.
     '''
-    def onGameInit(self, player_info):
-        pass
+    def on_game_init(self, player_info):
+        self.role = "Default"
 
-    def onGameCompletion(self, game_state):
+    def final_bonuses(self, game_state):
         return 0
 
+class SlackerPlayer(Player):
+    ''' 
+    Makes both SlackerPlayer and matched partner gain 0 points during a match. Adds 1 point per match
+    to themselves at the end of the game.
+    '''
+    successful_pairings = None
+
+    def on_game_init(self, player_info):
+        self.role = "The Slacker"
+        self.successful_pairings = 0
+
+    def on_matches_revealed(self, game_state):
+        #steals the point partner gains for net 0
+        #TODO
+        pass
+
+    def final_bonuses(self, game_state):
+        self.score = self.successful_pairings
+        return self.score
+
+class ThiefPlayer(Player):
+    ''' 
+    Steals one point from their partner, except when the other player is a slacker or
+    a snitch.
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Thief"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class SnitchPlayer(Player):
+    ''' 
+    Steals 2 points if paired with either the slacker or thief
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Snitch"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class CSGodPlayer(Player):
+    ''' 
+    Starts with 3 points
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The CS God"
+        self.score = 3
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class FlakePlayer(Player):
+    ''' 
+    When successfully paired, gets one bonus point per player that
+    unsuccessfully tried to pair with them or lose one point
+    if no other players.
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Flake"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class GossipPlayer(Player):
+    ''' 
+    Sees their project partner’s role when in a project team.
+    (dm’ed after announcement of the matching period results,
+    during the following period)
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Gossip"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class LeechPlayer(Player):
+    ''' 
+    Receives half of their project partner’s points (rounded down) when
+    successfully paired with the same person 2 weeks in a row.
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Leech"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class TeamPlayer(Player):
+    ''' 
+    Gives one point to themselves and their project partner when
+    successfully paired with the same person 2 weeks in a row.
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Team Player"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class SchadenfreuderPlayer(Player):
+    ''' 
+    Receives a random enemy and receives one point if their enemy
+    fails to find a project match.
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Schadenfreuder"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+class HackerPlayer(Player):
+    ''' 
+    Swaps their points with their project partner’s points when in a project team.
+    '''
+
+    def on_game_init(self, player_info):
+        self.role = "The Hacker"
+
+    def on_matches_revealed(self, game_state):
+        pass
+
+    def final_bonuses(self, game_state):
+        return self.score
+
+
+
 if __name__ == '__main__':
-    players = initGame()
-    roles = generateRoles((len(players)))
-    announceRoles(players, roles)
+    players = init_game()
+    roles = generate_roles((len(players)))
+    announce_roles(players, roles)
     game_state = State(len(players), players, roles)
-    player_states = initPlayerStates(game_state)
-    runGame(game_state, player_states)
+    player_states = init_player_states(game_state)
+    run_game(game_state, player_states)
