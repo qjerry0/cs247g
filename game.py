@@ -356,10 +356,10 @@ class CSGodPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The CS God"
-        game_state.public_scores[my_index] = 3
 
     def final_bonuses(self, game_state):
         my_index = game_state.player_dict[self.name]
+        game_state.public_scores[my_index] += 3
         return game_state.public_scores[my_index]
 
 class FlakePlayer(Player):
@@ -373,7 +373,7 @@ class FlakePlayer(Player):
         self.role = "The Flake"
         self.unsuccessful_pairings = 0
 
-    def add_unsuccessful(x):
+    def add_unsuccessful(self, x):
         self.unsuccessful_pairings += x
 
     def calculate_round_bonuses(self, game_state, match_name):
@@ -419,7 +419,7 @@ class LeechPlayer(Player):
         self.role = "The Leech"
         self.previous_match = None
         
-    def clear_prev_match():
+    def clear_prev_match(self):
         self.previous_match = None
 
     def calculate_round_bonuses(self, game_state, match_name):
@@ -446,7 +446,7 @@ class TeamPlayer(Player):
         self.role = "The Team Player"
         self.previous_match = None
         
-    def clear_prev_match():
+    def clear_prev_match(self):
         self.previous_match = None
 
     def calculate_round_bonuses(self, game_state, match_name):
