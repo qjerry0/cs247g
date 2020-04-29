@@ -174,7 +174,13 @@ def run_game(game_state, player_states):
         # Calculate bonus points for round
         for ps in player_states:
             if ps.name in successful_match_dict:
+                #if ps.role == '':
+                
                 ps.calculate_round_bonuses(game_state, successful_match_dict[ps.name])
+            else:
+                if ps.name == "leech" or ps.name == "team_player":
+                    ps.clear_prev_match():
+                
 
 
         # Reveal role of current leader
@@ -267,12 +273,10 @@ class SlackerPlayer(Player):
     Makes both SlackerPlayer and matched partner gain 0 points during a match. Adds 1 point per match
     to themselves at the end of the game.
     '''
-    # TODO: fix issue with successful_pairings variable
-    successful_pairings = None
 
     def on_game_init(self, player_info):
         self.role = "The Slacker"
-        successful_pairings = 0
+        self.successful_pairings = 0
 
     def calculate_round_bonuses(self, game_state, match_name):
         my_index = game_state.player_dict[self.name]
@@ -280,11 +284,11 @@ class SlackerPlayer(Player):
         game_state.public_scores[my_index] -= 1
         game_state.public_scores[match_index] -= 1
 
-        successful_pairings += 1
+        self.successful_pairings += 1
 
     def final_bonuses(self, game_state):
         my_index = game_state.player_dict[self.name]
-        game_state.public_scores[my_index] += successful_pairings
+        game_state.public_scores[my_index] += self.successful_pairings
         return game_state.public_scores[my_index]
 
 class ThiefPlayer(Player):
@@ -351,19 +355,15 @@ class FlakePlayer(Player):
     unsuccessfully tried to pair with them or lose one point
     if no other players.
     '''
-    #TODO logic for unsuccessful pairings, fix unsuccessful_pairings variable
-    unsuccessful_pairings = None
+    #TODO logic for unsuccessful pairings
 
     def on_game_init(self, player_info):
         self.role = "The Flake"
-        unsuccessful_pairings = 0
+        self.unsuccessful_pairings = 0
 
-    def add_point(self, game_state):
-        pass
-
-    def final_bonuses(self, game_state):
+    def final_bonuses(self, game_state):t
         my_index = game_state.player_dict[self.name]
-        game_state.public_scores[my_index] += unsuccessful_pairings
+        game_state.public_scores[my_index] += self.unsuccessful_pairings
         return game_state.public_scores[my_index]
 
 class GossipPlayer(Player):
@@ -390,10 +390,23 @@ class LeechPlayer(Player):
     Receives half of their project partner’s points (rounded down) when
     successfully paired with the same person 2 weeks in a row.
     '''
-    # TODO: implement calculate_round_bonuses for this class
 
     def on_game_init(self, player_info):
         self.role = "The Leech"
+        self.previous_match = None
+        
+    def clear_prev_match():
+        self.previous_match = None
+
+    def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
+        match_index = game_state.player_dict[match_name]
+
+        if match_name == previous_match:
+            match_half = int(game_state.public_scores[match_index] / 2)
+            game_state.public_scores[my_index] += match_half   #set own score
+        else:
+            self.previous_match = match_name
 
     def final_bonuses(self, game_state):
         my_index = game_state.player_dict[self.name]
@@ -404,13 +417,23 @@ class TeamPlayer(Player):
     Gives one point to themselves and their project partner when
     successfully paired with the same person 2 weeks in a row.
     '''
-    # TODO: implement calculate_round_bonuses for this class
 
     def on_game_init(self, player_info):
         self.role = "The Team Player"
+        self.previous_match = None
+        
+    def clear_prev_match():
+        self.previous_match = None
 
-    def add_point(self, game_state):
-        pass
+    def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
+        match_index = game_state.player_dict[match_name]
+
+        if match_name == previous_match:
+            game_state.public_scores[match_index] += 1   #set partner's score
+            game_state.public_scores[my_index] += 1   #set own score
+        else:
+            self.previous_match = match_name
 
     def final_bonuses(self, game_state):
         my_index = game_state.player_dict[self.name]
