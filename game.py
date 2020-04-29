@@ -7,6 +7,7 @@ MIN_ROUND_NUM = 4           # min number of rounds of matching
 MAX_ROUND_NUM = 6           # max number of rounds of matching
 MIN_MESSAGE_TIMER = 90      # min time to message, in sec
 MAX_MESSAGE_TIMER = 120     # max time to message, in sec
+ROLE_REVEAL_ROUND = 2       # turn that role is revealed for 1st place
 ROLES_34 = ["team_player", "schadenfreuder", "slacker", "thief", "snitch", "flake", "leech"]    # role set, 3-4
 ROLES_5 = ["slacker", "thief", "snitch", "god", "leech", "team_player", "schadenfreuder"],      # role set, 5
 ROLES_6 = ["slacker", "thief", "snitch", "god", "flake", "gossip", "leech", "team_player",      # role set, 6+
@@ -97,13 +98,6 @@ def announce_roles(players, roles):
         print("Narrator, please let " + schadenfreuder_name + " know their enemy is " + enemy)
 
 
-def announce_matches(players, matches):
-    ''' Prompts narrator to tell players their preferences in the reveal phase
-        @param players      The players' names
-        @param roles        The players' matches, in the same order
-    ''' 
-    # TODO: implement this, figure out some fun/interesting way to announce
-    pass
 
 def announce_role(game_state):
     ''' Prompts narrator to publically announce a player's role, if necessary given the game state
@@ -152,11 +146,8 @@ def run_game(game_state, player_states):
                 partner by messaging them!" % (round_print, game_state.round_times[game_state.round]))
         # TODO: implement delay/prompts for narrator during the matching phase, e.g. 30 sec warning (please message me your matches!)
         
-        # Announce matches
+        # Calculate and announce matches
         matches = input_matches(game_state.players)
-        announce_matches(players, matches)
-
-        # Calculate Matches
         successful_match_dict = successful_pairings(matches)
         print("These were the successfull pairings for the round: " + str(successful_match_dict))
 
@@ -168,39 +159,30 @@ def run_game(game_state, player_states):
             
             i += 1
 
-        '''
-        for player in successful_match_dict:
-            player.add_point(game_state)
-
-        '''
-
         # Calculate bonus points for round
-        index = 0
         for ps in player_states:
             if player in successful_match_dict:
-                ps.calculate_round_bonuses(game_state, successful_match_dict[ps], index)
+                ps.calculate_round_bonuses(game_state, successful_match_dict[ps])
 
 
-        # Role reveal phase
-        #if game_state.round == 2:
-            #announce role of current person in lead
-            #current_ranking =
-            #print(p + " is currently in the lead, meaning it's time to reveal their role!")
-            #print(p + "'s role is.... " + fs.role)
+        # Reveal role of current leader
+        if game_state.round == ROLE_REVEAL_ROUND:
+            current_ranking = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
+            current_ranking.reverse() # start from last place and move up
+            leader_name = current_ranking[0]    # TODO: make sure this is right
+            leader_index = game_state.player_dict[leader_name]
 
-        # announce_role(game_state)
-        # for ps in player_states:
-            # TODO ps.onRoleRevealed(game_state)
-
+            print(leader_name + " is currently in the lead, meaning it's time to reveal their role!")
+            print(leader_name + "'s role is.... " + game_state.roles[leader_index])
 
         game_state.round += 1
 
-    # All rounds have finished, tally final scores
-    final_scores = []
-    for ps in player_states:
-        final_scores.append(ps.final_bonuses(game_state))
 
-    rankings = [(p, fs) for fs , p in sorted(zip(final_scores, players))]
+    # All rounds have finished, tally final scores
+    for ps in player_states:
+        final_bonuses(game_state))
+
+    rankings = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
     rankings.reverse() # start from last place and move up 
 
     print("Narrator, please say: ")
@@ -220,6 +202,7 @@ class State(object):
         self.roles = roles # list of player roles as strings, in the same order as self.players
         self.public_roles = ["hidden"] * n # list of publically revealed roles as strings, same order as self.players
         self.public_scores = [0] * n # public scores of each player, in the same order as self.players
+        self.player_dict = {}    # maps {player name string : corresponding index in players, roles, and public_scores}
         self.round_times = [] # time in seconds for each round, with length = n
         self.current_round_matches = None   # matches for the current round of play. self.current_round_matches[i] indicates
                                             # the match for the i'th player
@@ -234,12 +217,11 @@ class Player(object):
     A player in our game, each will be uniquely identified by its name. To make a new role,
     extend and implement this class.
     '''
-    # TODO: remove all return self.score s
     
     def __init__(self, name, role):
         self.name = name
         self.role = role
-        self.score = 0
+        self.index = None
 
     def on_game_init(self, game_state):
         ''' This will be called upon initialization of the game. Implement for each player.
@@ -247,24 +229,15 @@ class Player(object):
         '''
         pass
 
-
-    #def add_point(self, game_state):
-        ''' Called when narrator reveals matches for the round. Adds one point
-        @param game_state   The current game state
-        '''
-        #self.score += 1
-
-    def calculate_round_bonuses(self, game_state, match_name, index):
+    def calculate_round_bonuses(self, game_state, match_name):
         '''
         Called at the end of each round after normal points are added.
         Changes score based on each unique role
         Implement in each class.
 
         @param successful_match     name of person they matched with
-        @param index    passed in index for themselves
         '''
         pass
-
 
 
     def final_bonuses(self, game_state):
@@ -281,6 +254,7 @@ class DefaultPlayer(Player):
     '''
     def on_game_init(self, player_info):
         self.role = "Default"
+        self.index = game_state.player_dict[self.name]
 
     def final_bonuses(self, game_state):
         return 0
@@ -294,15 +268,19 @@ class SlackerPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Slacker"
+        self.index = game_state.player_dict[self.name]
         self.successful_pairings = 0
 
-    def calculate_round_bonuses(self, game_state, match_name, index):
-        game_state.public_scores[index] -= 1
-        #TODO: subtract 1 from match_name
+    def calculate_round_bonuses(self, game_state, match_name):
+        match_index = game_state.player_dict[match_name]
+        game_state.public_scores[self.index] -= 1
+        game_state.public_scores[match_index] -= 1
+
+        self.successful_pairings += 1
 
     def final_bonuses(self, game_state):
-        self.score = self.successful_pairings
-        return self.score
+        game_state.public_scores[self.index] += self.successful_pairings
+        return game_state.public_scores[self.index]
 
 class ThiefPlayer(Player):
     ''' 
@@ -312,13 +290,19 @@ class ThiefPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Thief"
+        self.index = game_state.player_dict[self.name]
 
-    def calculate_round_bonuses(self, game_state, match_name, index):
-        game_state.public_scores[index] -= 1
-        #TODO: subtract 1 from match_name if !slacker and !snitch, then add 1
+    def calculate_round_bonuses(self, game_state, match_name):
+        match_index = game_state.player_dict[match_name]
+        match_role = game_state.roles[match_name]    #set enemy score
+
+        if (match_role != "slacker") and (match_role != 'thief'):
+            game_state.public_scores[match_index] -= 1  #set enemy score
+            game_state.public_scores[self.index] += 1   #set own score
+
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class SnitchPlayer(Player):
     ''' 
@@ -328,12 +312,17 @@ class SnitchPlayer(Player):
     def on_game_init(self, player_info):
         self.role = "The Snitch"
 
-    def calculate_round_bonuses(self, game_state, match_name, index):
-        game_state.public_scores[index] -= 1
-        #TODO: subtract 2 from match_name if slacker or thief, then add 2
+    def calculate_round_bonuses(self, game_state, match_name):
+        match_index = game_state.player_dict[match_name]
+        match_role = game_state.roles[match_name]    #set enemy score
+
+        if (match_role == "slacker") or (match_role == 'thief'):
+            game_state.public_scores[match_index] -= 2  #set enemy score
+            game_state.public_scores[self.index] += 2   #set own score
+
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class CSGodPlayer(Player):
     ''' 
@@ -342,10 +331,11 @@ class CSGodPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The CS God"
+        self.index = game_state.player_dict[self.name]
         self.score = 3
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class FlakePlayer(Player):
     ''' 
@@ -353,11 +343,12 @@ class FlakePlayer(Player):
     unsuccessfully tried to pair with them or lose one point
     if no other players.
     '''
-
+    #TODO logic for unsuccessful pairings
     unsuccessful_pairings = None
 
     def on_game_init(self, player_info):
         self.role = "The Flake"
+        self.index = game_state.player_dict[self.name]
         self.unsuccessful_pairings = 0
 
     def add_point(self, game_state):
@@ -365,7 +356,7 @@ class FlakePlayer(Player):
 
     def final_bonuses(self, game_state):
         game_state.public_scores[index] += unsuccessful_pairings
-        return self.score
+        return game_state.public_scores[self.index]
 
 class GossipPlayer(Player):
     ''' 
@@ -376,12 +367,15 @@ class GossipPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Gossip"
+        self.index = game_state.player_dict[self.name]
 
-    #def calculate_round_bonuses(self, game_state, match_name, index):
-        # print match_name and their role
+    def calculate_round_bonuses(self, game_state, match_name, index):
+        match_index = game_state.player_dict[match_name]
+        match_role = game_state.roles[match_name]
+        print("Narrator, please let " + self.name + " know their partner this round is the " + match_role)
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class LeechPlayer(Player):
     ''' 
@@ -392,12 +386,13 @@ class LeechPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Leech"
+        self.index = game_state.player_dict[self.name]
 
     def add_point(self, game_state):
         pass
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class TeamPlayer(Player):
     ''' 
@@ -408,12 +403,13 @@ class TeamPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Team Player"
+        self.index = game_state.player_dict[self.name]
 
     def add_point(self, game_state):
         pass
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class SchadenfreuderPlayer(Player):
     ''' 
@@ -424,37 +420,44 @@ class SchadenfreuderPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Schadenfreuder"
+        self.index = game_state.player_dict[self.name]
 
     def setEnemy(schadenfreuder_name):
         self.enemy = schadenfreuder_name
 
-    def calculate_round_bonuses(self, game_state, match_name, index):
+    def calculate_round_bonuses(self, game_state, match_name):
         if matchname == self.enemy:
-            game_state.public_scores[index] += 1
+            game_state.public_scores[self.index] += 1
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 class HackerPlayer(Player):
     ''' 
     Swaps their points with their project partner’s points when in a project team.
     '''
-    # TODO: implement calculate_round_bonuses for this class
 
     def on_game_init(self, player_info):
         self.role = "The Hacker"
+        self.index = game_state.player_dict[self.name]
 
-    def add_point(self, game_state):
-        pass
+    def calculate_round_bonuses(self, game_state, match_name):
+        match_index = game_state.player_dict[match_name]
+        my_points_tmp = game_state.public_scores[self.index]
+
+        game_state.public_scores[self.index] = game_state.public_scores[match_index]    #set own score
+        game_state.public_scores[match_index] = my_point_tmp    #set enemy score
+
 
     def final_bonuses(self, game_state):
-        return self.score
+        return game_state.public_scores[self.index]
 
 
 
 if __name__ == '__main__':
     players = init_game()
     roles = generate_roles((len(players)))
+    player_dict = {val : i for i, val in enumerate(a)}
     announce_roles(players, roles)
     game_state = State(len(players), players, roles)
     player_states = init_player_states(game_state)
