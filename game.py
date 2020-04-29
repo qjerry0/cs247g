@@ -105,12 +105,11 @@ def announce_role(game_state):
         current_ranking = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
         current_ranking.reverse() # start from last place and move up
         print("Current ranking is " + str(current_ranking))
-        leader_name = current_ranking[0][0]    # TODO: make sure this is right
-        print("CURRENT RANKING " + leader_name)
+        leader_name = current_ranking[0][0]
         leader_index = game_state.player_dict[leader_name]
 
         print(leader_name + " is currently in the lead, meaning it's time to reveal their role!")
-        print(leader_name + "'s role is.... the " + game_state.roles[leader_index])
+        print(leader_name + "'s role is.... the " + game_state.roles[leader_index] + "!!!")
 
 
 def input_matches(players):
@@ -141,6 +140,19 @@ def successful_pairings(matches):
             successful_pairs[v] = k
     
     return successful_pairs
+
+def calculate_unsuccessful_num(matches, flake_name):
+    ''' Exclusively used for The Flake role 
+        @return number of players that tried but failed to match with The Flake
+    '''
+    unsuccessful = 0
+    for k, v in matches.items():
+        if v == flake_name and matches[flake_name] != k:
+            unsuccessful += 1
+
+    return unsuccessful
+
+
 
 
 def run_game(game_state, player_states):
@@ -174,13 +186,14 @@ def run_game(game_state, player_states):
         # Calculate bonus points for round
         for ps in player_states:
             if ps.name in successful_match_dict:
-                #if ps.role == '':
+                if ps.role == "flake":
+                    num_unsuccessful = calculate_unsuccessful_num(matches, ps.name)
+                    ps.add_unsuccessful(num_unsuccessful)
                 
                 ps.calculate_round_bonuses(game_state, successful_match_dict[ps.name])
             else:
-                if ps.name == "leech" or ps.name == "team_player":
-                    ps.clear_prev_match():
-                
+                if ps.role == "leech" or ps.role == "team_player":
+                    ps.clear_prev_match()
 
 
         # Reveal role of current leader
@@ -355,15 +368,26 @@ class FlakePlayer(Player):
     unsuccessfully tried to pair with them or lose one point
     if no other players.
     '''
-    #TODO logic for unsuccessful pairings
 
     def on_game_init(self, player_info):
         self.role = "The Flake"
         self.unsuccessful_pairings = 0
 
-    def final_bonuses(self, game_state):t
+    def add_unsuccessful(x):
+        self.unsuccessful_pairings += x
+
+    def calculate_round_bonuses(self, game_state, match_name):
         my_index = game_state.player_dict[self.name]
-        game_state.public_scores[my_index] += self.unsuccessful_pairings
+
+        if self.unsuccessful_pairings == 0:
+            game_state.public_scores[my_index] -= 1
+        else:
+            game_state.public_scores[my_index] += self.unsuccessful_pairings
+
+        self.unsuccessful_pairings = 0
+
+    def final_bonuses(self, game_state):
+        my_index = game_state.player_dict[self.name]
         return game_state.public_scores[my_index]
 
 class GossipPlayer(Player):
