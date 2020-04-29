@@ -9,7 +9,7 @@ MIN_MESSAGE_TIMER = 90      # min time to message, in sec
 MAX_MESSAGE_TIMER = 120     # max time to message, in sec
 ROLE_REVEAL_ROUND = 2       # turn that role is revealed for 1st place
 ROLES_34 = ["team_player", "schadenfreuder", "slacker", "thief", "snitch", "flake", "leech"]    # role set, 3-4
-ROLES_5 = ["slacker", "thief", "snitch", "god", "leech", "team_player", "schadenfreuder"],      # role set, 5
+ROLES_5 = ["slacker", "thief", "snitch", "god", "leech", "team_player", "schadenfreuder"]      # role set, 5
 ROLES_6 = ["slacker", "thief", "snitch", "god", "flake", "gossip", "leech", "team_player",      # role set, 6+
             "schadenfreuder", "hacker"]
 
