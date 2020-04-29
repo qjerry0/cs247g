@@ -145,6 +145,7 @@ def run_game(game_state, player_states):
         # Calculate and announce matches
         matches = input_matches(game_state.players)
         successful_match_dict = successful_pairings(matches)
+
         print("These were the successfull pairings for the round: " + str(successful_match_dict))
 
         # Add 1 point for every match in round
@@ -166,18 +167,19 @@ def run_game(game_state, player_states):
             current_ranking = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
             current_ranking.reverse() # start from last place and move up
             print("Current ranking is " + str(current_ranking))
-            leader_name = current_ranking[0]    # TODO: make sure this is right
+            leader_name = current_ranking[0][0]    # TODO: make sure this is right
+            print("CURRENT RANKING " + leader_name)
             leader_index = game_state.player_dict[leader_name]
 
             print(leader_name + " is currently in the lead, meaning it's time to reveal their role!")
-            print(leader_name + "'s role is.... " + game_state.roles[leader_index])
+            print(leader_name + "'s role is.... the " + game_state.roles[leader_index])
 
         game_state.round += 1
 
 
     # All rounds have finished, tally final scores
     for ps in player_states:
-        final_bonuses(game_state)
+        ps.final_bonuses(game_state)
 
     rankings = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
     rankings.reverse() # start from last place and move up 
@@ -198,8 +200,8 @@ class State(object):
         self.players = players # list player names as strings
         self.roles = roles # list of player roles as strings, in the same order as self.players
         self.public_roles = ["hidden"] * n # list of publically revealed roles as strings, same order as self.players
-        self.public_scores = [] # public scores of each player, in the same order as self.players
-        self.player_dict = {}    # maps {player name string : corresponding index in players, roles, and public_scores}
+        self.public_scores = [0] * n # public scores of each player, in the same order as self.players
+        self.player_dict = {val : i for i, val in enumerate(players)}   # maps {player name string : corresponding index in players, roles, and public_scores}
         self.round_times = [] # time in seconds for each round, with length = n
         self.current_round_matches = None   # matches for the current round of play. self.current_round_matches[i] indicates
                                             # the match for the i'th player
@@ -218,7 +220,6 @@ class Player(object):
     def __init__(self, name, role):
         self.name = name
         self.role = role
-        self.index = None
 
     def on_game_init(self, game_state):
         ''' This will be called upon initialization of the game. Implement for each player.
@@ -251,7 +252,6 @@ class DefaultPlayer(Player):
     '''
     def on_game_init(self, player_info):
         self.role = "Default"
-        self.index = game_state.player_dict[self.name]
 
     def final_bonuses(self, game_state):
         return 0
@@ -265,19 +265,20 @@ class SlackerPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Slacker"
-        self.index = game_state.player_dict[self.name]
         self.successful_pairings = 0
 
     def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
         match_index = game_state.player_dict[match_name]
-        game_state.public_scores[self.index] -= 1
+        game_state.public_scores[my_index] -= 1
         game_state.public_scores[match_index] -= 1
 
         self.successful_pairings += 1
 
     def final_bonuses(self, game_state):
-        game_state.public_scores[self.index] += self.successful_pairings
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        game_state.public_scores[my_index] += self.successful_pairings
+        return game_state.public_scores[my_index]
 
 class ThiefPlayer(Player):
     ''' 
@@ -287,19 +288,20 @@ class ThiefPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Thief"
-        self.index = game_state.player_dict[self.name]
 
     def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
         match_index = game_state.player_dict[match_name]
-        match_role = game_state.roles[match_name]    #set enemy score
+        match_role = game_state.roles[match_index]    #set enemy score
 
         if (match_role != "slacker") and (match_role != 'thief'):
             game_state.public_scores[match_index] -= 1  #set enemy score
-            game_state.public_scores[self.index] += 1   #set own score
+            game_state.public_scores[my_index] += 1   #set own score
 
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class SnitchPlayer(Player):
     ''' 
@@ -310,16 +312,18 @@ class SnitchPlayer(Player):
         self.role = "The Snitch"
 
     def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
         match_index = game_state.player_dict[match_name]
-        match_role = game_state.roles[match_name]    #set enemy score
+        match_role = game_state.roles[match_index]    #set enemy score
 
         if (match_role == "slacker") or (match_role == 'thief'):
             game_state.public_scores[match_index] -= 2  #set enemy score
-            game_state.public_scores[self.index] += 2   #set own score
+            game_state.public_scores[my_index] += 2   #set own score
 
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class CSGodPlayer(Player):
     ''' 
@@ -328,11 +332,11 @@ class CSGodPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The CS God"
-        self.index = game_state.player_dict[self.name]
         self.score = 3
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class FlakePlayer(Player):
     ''' 
@@ -345,15 +349,15 @@ class FlakePlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Flake"
-        self.index = game_state.player_dict[self.name]
         self.unsuccessful_pairings = 0
 
     def add_point(self, game_state):
         pass
 
     def final_bonuses(self, game_state):
+        my_index = game_state.player_dict[self.name]
         game_state.public_scores[index] += unsuccessful_pairings
-        return game_state.public_scores[self.index]
+        return game_state.public_scores[my_index]
 
 class GossipPlayer(Player):
     ''' 
@@ -364,15 +368,15 @@ class GossipPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Gossip"
-        self.index = game_state.player_dict[self.name]
 
     def calculate_round_bonuses(self, game_state, match_name, index):
         match_index = game_state.player_dict[match_name]
-        match_role = game_state.roles[match_name]
+        match_role = game_state.roles[match_index]
         print("Narrator, please let " + self.name + " know their partner this round is the " + match_role)
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class LeechPlayer(Player):
     ''' 
@@ -383,10 +387,10 @@ class LeechPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Leech"
-        self.index = game_state.player_dict[self.name]
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class TeamPlayer(Player):
     ''' 
@@ -397,13 +401,13 @@ class TeamPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Team Player"
-        self.index = game_state.player_dict[self.name]
 
     def add_point(self, game_state):
         pass
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class SchadenfreuderPlayer(Player):
     ''' 
@@ -414,17 +418,18 @@ class SchadenfreuderPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Schadenfreuder"
-        self.index = game_state.player_dict[self.name]
 
     def setEnemy(self, schadenfreuder_name):
         self.enemy = schadenfreuder_name
 
     def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
         if match_name == self.enemy:
-            game_state.public_scores[self.index] += 1
+            game_state.public_scores[my_index] += 1
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 class HackerPlayer(Player):
     ''' 
@@ -433,26 +438,25 @@ class HackerPlayer(Player):
 
     def on_game_init(self, player_info):
         self.role = "The Hacker"
-        self.index = game_state.player_dict[self.name]
 
     def calculate_round_bonuses(self, game_state, match_name):
+        my_index = game_state.player_dict[self.name]
         match_index = game_state.player_dict[match_name]
-        my_points_tmp = game_state.public_scores[self.index]
+        my_points_tmp = game_state.public_scores[my_index]
 
-        game_state.public_scores[self.index] = game_state.public_scores[match_index]    #set own score
+        game_state.public_scores[my_index] = game_state.public_scores[match_index]    #set own score
         game_state.public_scores[match_index] = my_point_tmp    #set enemy score
 
 
     def final_bonuses(self, game_state):
-        return game_state.public_scores[self.index]
+        my_index = game_state.player_dict[self.name]
+        return game_state.public_scores[my_index]
 
 
 
 if __name__ == '__main__':
     players = init_game()
-    public_scores = [0] * len(players)
     roles = generate_roles((len(players)))
-    player_dict = {val : i for i, val in enumerate(players)}
     announce_roles(players, roles)
     game_state = State(len(players), players, roles)
     player_states = init_player_states(game_state)
