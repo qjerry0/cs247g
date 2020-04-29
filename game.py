@@ -356,7 +356,7 @@ class FlakePlayer(Player):
 
     def final_bonuses(self, game_state):
         my_index = game_state.player_dict[self.name]
-        game_state.public_scores[index] += unsuccessful_pairings
+        game_state.public_scores[my_index] += unsuccessful_pairings
         return game_state.public_scores[my_index]
 
 class GossipPlayer(Player):
