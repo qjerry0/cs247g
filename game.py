@@ -73,7 +73,10 @@ def init_player_states(game_state):
     ''' 
     players = []
     for p, r in zip(game_state.players, game_state.roles):
-        players.append(globals()[ROLE_DICT[r]](p, r)) 
+        players.append(globals()[ROLE_DICT[r]](p, r))
+
+    for player in players:
+        player.on_game_init()
 
     return players
 
@@ -275,7 +278,7 @@ class DefaultPlayer(Player):
     ''' 
     A default player with no special role or ability. Always scores 0 at the end of the game.
     '''
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "Default"
 
     def final_bonuses(self, game_state):
@@ -287,7 +290,7 @@ class SlackerPlayer(Player):
     to themselves at the end of the game.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Slacker"
         self.successful_pairings = 0
 
@@ -310,7 +313,7 @@ class ThiefPlayer(Player):
     a snitch.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Thief"
 
     def calculate_round_bonuses(self, game_state, match_name):
@@ -332,7 +335,7 @@ class SnitchPlayer(Player):
     Steals 2 points if paired with either the slacker or thief
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Snitch"
 
     def calculate_round_bonuses(self, game_state, match_name):
@@ -354,7 +357,7 @@ class CSGodPlayer(Player):
     Starts with 3 points
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The CS God"
 
     def final_bonuses(self, game_state):
@@ -369,7 +372,7 @@ class FlakePlayer(Player):
     if no other players.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Flake"
         self.unsuccessful_pairings = 0
 
@@ -397,7 +400,7 @@ class GossipPlayer(Player):
     during the following period)
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Gossip"
 
     def calculate_round_bonuses(self, game_state, match_name):
@@ -415,7 +418,7 @@ class LeechPlayer(Player):
     successfully paired with the same person 2 weeks in a row.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Leech"
         self.previous_match = None
         
@@ -442,7 +445,7 @@ class TeamPlayer(Player):
     successfully paired with the same person 2 weeks in a row.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Team Player"
         self.previous_match = None
         
@@ -469,7 +472,7 @@ class SchadenfreuderPlayer(Player):
     fails to find a project match.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Schadenfreuder"
 
     def setEnemy(self, schadenfreuder_name):
@@ -489,7 +492,7 @@ class HackerPlayer(Player):
     Swaps their points with their project partner’s points when in a project team.
     '''
 
-    def on_game_init(self, player_info):
+    def on_game_init(self):
         self.role = "The Hacker"
 
     def calculate_round_bonuses(self, game_state, match_name):
