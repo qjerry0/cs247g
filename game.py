@@ -426,7 +426,7 @@ class LeechPlayer(Player):
         my_index = game_state.player_dict[self.name]
         match_index = game_state.player_dict[match_name]
 
-        if match_name == previous_match:
+        if match_name == self.previous_match:
             match_half = int(game_state.public_scores[match_index] / 2)
             game_state.public_scores[my_index] += match_half   #set own score
         else:
@@ -453,7 +453,7 @@ class TeamPlayer(Player):
         my_index = game_state.player_dict[self.name]
         match_index = game_state.player_dict[match_name]
 
-        if match_name == previous_match:
+        if match_name == self.previous_match:
             game_state.public_scores[match_index] += 1   #set partner's score
             game_state.public_scores[my_index] += 1   #set own score
         else:
