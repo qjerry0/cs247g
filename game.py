@@ -8,8 +8,8 @@ MAX_ROUND_NUM = 6           # max number of rounds of matching
 MIN_MESSAGE_TIMER = 90      # min time to message, in sec
 MAX_MESSAGE_TIMER = 120     # max time to message, in sec
 ROLE_REVEAL_ROUND = 1       # turn that role is revealed for 1st place
-ROLES_34 = ["team_player", "schadenfreuder", "slacker", "thief", "snitch", "flake", "leech"]    # role set, 3-4
-ROLES_5 = ["slacker", "thief", "snitch", "god", "leech", "team_player", "schadenfreuder"]      # role set, 5
+ROLES_34 = ["slacker", "thief", "snitch", "flake", "leech"]    # role set, 3-4
+ROLES_5 = ["slacker", "thief", "snitch", "flake", "leech"]     # role set, 5
 ROLES_6 = ["slacker", "thief", "snitch", "god", "flake", "gossip", "leech", "team_player",      # role set, 6+
             "schadenfreuder", "hacker"]
 
@@ -104,7 +104,7 @@ def announce_role(game_state):
     ''' Prompts narrator to publically announce a player's role, if necessary given the game state
         @param game_state   The game state
     ''' 
-    if game_state.round == ROLE_REVEAL_ROUND:
+    if game_state.round >= ROLE_REVEAL_ROUND:
         current_ranking = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
         current_ranking.reverse() # start from last place and move up
         print("Current ranking is " + str(current_ranking))
