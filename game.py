@@ -108,10 +108,15 @@ def announce_role(game_state):
         current_ranking = [(p, fs) for fs , p in sorted(zip(game_state.public_scores, players))]
         current_ranking.reverse() # start from last place and move up
         print("Current ranking is " + str(current_ranking))
-        leader_name = current_ranking[0][0]
-        leader_index = game_state.player_dict[leader_name]
 
-        print(leader_name + " is currently in the lead, meaning it's time to reveal their role!")
+        idx = 0
+        while current_ranking[idx][0] in game_state.public_roles:
+            idx += 1
+        leader_name = current_ranking[idx][0]
+        leader_index = game_state.player_dict[leader_name]
+        game_state.public_roles.add(leader_name)
+
+        print(leader_name + " is the player with the most points who's still hidden, meaning it's time to reveal their role!")
         print(leader_name + "'s role is.... the " + game_state.roles[leader_index] + "!!!")
 
 
@@ -228,7 +233,7 @@ class State(object):
         self.max_rounds = min(MIN_ROUND_NUM, max(n, MAX_ROUND_NUM)) # number of rounds in the game
         self.players = players # list player names as strings
         self.roles = roles # list of player roles as strings, in the same order as self.players
-        self.public_roles = ["hidden"] * n # list of publically revealed roles as strings, same order as self.players
+        self.public_roles = set() # set of publically revealed players
         self.public_scores = [0] * n # public scores of each player, in the same order as self.players
         self.player_dict = {val : i for i, val in enumerate(players)}   # maps {player name string : corresponding index in players, roles, and public_scores}
         self.round_times = [] # time in seconds for each round, with length = n
