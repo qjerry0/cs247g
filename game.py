@@ -180,11 +180,14 @@ def run_game(game_state, player_states):
 
         # Add 1 point for every match in round
         i = 0
+        print("PUBLIC SCORES BEFORE +1" + str(game_state.public_scores))
         for ps in player_states:
-            if (ps in successful_match_dict):
+            if (ps.name in successful_match_dict):
                 game_state.public_scores[i] += 1
             
             i += 1
+        print("PUBLIC SCORES after +1" + str(game_state.public_scores))
+
 
         # Calculate bonus points for round
         for ps in player_states:
