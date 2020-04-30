@@ -189,7 +189,6 @@ def run_game(game_state, player_states):
         # Calculate bonus points for round
         for ps in player_states:
             if ps.name in successful_match_dict:
-                print("ps.rolllleleee" + ps.role)
                 if ps.role == "The Flake":
                     num_unsuccessful = calculate_unsuccessful_num(matches, ps.name)
                     ps.add_unsuccessful(num_unsuccessful)
@@ -382,7 +381,6 @@ class FlakePlayer(Player):
 
     def calculate_round_bonuses(self, game_state, match_name):
         my_index = game_state.player_dict[self.name]
-        print("Flake unsuccessful is " + str(self.unsuccessful_pairings))
         if self.unsuccessful_pairings == 0:
             game_state.public_scores[my_index] -= 1
         else:
