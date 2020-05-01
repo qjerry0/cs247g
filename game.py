@@ -2,7 +2,7 @@ import random
 
 # CONSTANTS
 MIN_PLAYERS = 3             # min player count
-MAX_PLAYERS = 8             # max player count
+MAX_PLAYERS = 6             # max player count
 MIN_ROUND_NUM = 4           # min number of rounds of matching
 MAX_ROUND_NUM = 6           # max number of rounds of matching
 MIN_MESSAGE_TIMER = 90      # min time to message, in sec
